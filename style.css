@@ -1,0 +1,399 @@
+/* ======================================
+   Reset universal y box-sizing
+   ====================================== */
+   *,
+   *::before,
+   *::after {
+     box-sizing: border-box;
+     margin: 0;
+     padding: 0;
+   }
+   
+   /* ======================================
+      Estilos básicos para html y body
+      ====================================== */
+   html, body {
+     width: 100%;
+     height: 100%;
+     overflow: hidden; /* Evita scroll extra */
+     font-family: "Montserrat";
+     font-weight: 500;
+   }
+   
+   /* ======================================
+      Barra de navegación
+      ====================================== */
+
+    .navbar {
+        background-color: rgb(84, 0, 0);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap; /* Permite que el menú se ajuste en móviles */
+        overflow: visible; /* Evita que el menú colapsado desaparezca */
+        padding: 0.5em 1em;
+        color: white;
+        height: auto;
+      }
+   
+   .navbar-brand {
+     display: flex;
+     align-items: center;
+     gap: 1em;
+     text-decoration: none;
+     color: inherit;}
+
+     .navbar-nav {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      width: 100%;
+      
+  }
+  
+     .navbar-collapse {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      border-radius: 0.5em;
+      padding-left: 1em;
+      padding-right: 1em;
+
+      background-color: rgb(97, 0, 0); 
+  }
+  
+   
+   .navbar-text {
+     font-size: 0.7em;
+     color:white;
+   }
+   
+   .logo {
+     width: 120px;
+     padding-left: 1em;
+   }
+   
+   .nav-link {
+     color: #fff;
+   }
+
+   .social-icons {
+    display: flex;
+    gap: 20px; /* Espacio entre los iconos */
+    align-items: center;
+    text-align: center;
+    padding-left: 1em;
+}
+
+.social-icons a {
+    color: white; /* Asegura que los íconos sean visibles */
+    font-size: 1.2em; /* Tamaño de los íconos */
+    text-decoration: none;
+}
+
+.social-icons a:hover {
+    color: hsl(0, 1%, 77%); /* Efecto hover para mejorar accesibilidad */
+}
+
+
+
+   
+   /* ======================================
+      Sidebar (panel lateral) y botón toggle
+      ====================================== */
+   .sidebar-container {
+     display: none; 
+   }
+   
+   .sidebar-container.oculto {
+     transform: translateX(-300px);
+   }
+   
+   .informacion {
+     position: absolute;
+     top: 0;
+     left: 0;
+     width: 300px;
+     height: 100%;
+     background-color: rgba(57, 0, 0, 0.735);
+     color: #fff;
+     backdrop-filter: blur(5px);
+   }
+   
+   .contenido-informacion {
+     width: 95%;
+     margin: 0 auto;
+     padding: 20px 0;
+   }
+   
+   /* Botón tipo "hamburger" */
+   .toggle-btn {
+     position: absolute;
+     top: 0;
+     left: 300px; /* Al borde derecho del panel */
+     width: 40px;
+     height: 40px;
+     background-color: rgb(108, 1, 1);
+     border: none;
+     border-radius: 0 4px 4px 0;
+     cursor: pointer;
+     z-index: 9999;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+   }
+   
+   .hamburger {
+     width: 20px;
+     height: 2px;
+     background-color: #fff;
+     position: relative;
+   }
+   
+   .hamburger::before,
+   .hamburger::after {
+     content: "";
+     position: absolute;
+     left: 0;
+     width: 20px;
+     height: 2px;
+     background-color: #fff;
+   }
+   
+   .hamburger::before {
+     top: -6px;
+   }
+   
+   .hamburger::after {
+     top: 6px;
+   }
+   
+   /* ======================================
+      Contenedor principal y mapa
+      ====================================== */
+   .main-container {
+     position: relative;
+     width: 100%;
+     height: calc(100% - 5em); /* Resta la altura de la navbar */
+   }
+   
+   .map-container {
+     position: absolute;
+     top: 0;
+     left: 0;
+     width: 100%;
+     height: 100%;
+     z-index: 1;
+   }
+   
+   #map {
+     width: 100%;
+     height: 100%;
+     background-color: rgb(203, 203, 203);
+   }
+   
+   /* ======================================
+      Formularios y sugerencias
+      ====================================== */
+   .form {
+     text-align: center;
+     padding: 1em;
+   }
+   
+   .label_buscar_colonia {
+     text-align: right;
+   }
+   
+   .suggestions {
+     position: absolute;
+     width: 100%;
+     background: #fff;
+     border: 1px solid #ccc;
+     border-radius: 5px;
+     max-height: 200px;
+     overflow-y: auto;
+     z-index: 1000;
+     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+     display: none;
+     color: #000;
+   }
+   
+   .suggestions .suggestion-item {
+     padding: 10px;
+     cursor: pointer;
+     transition: background-color 0.2s ease-in-out;
+   }
+   
+   .suggestions .suggestion-item:hover {
+     background-color: #f0f0f0;
+   }
+
+      /* ======================================
+      POPUP
+      ====================================== */
+
+/* Aplicar Montserrat Medium al popup de estadísticas */
+.popup, .modal-content, #estadisticasModalLabel, #estadisticasInfo {
+  font-family: 'Montserrat', sans-serif !important;
+  font-weight: 500 !important;
+  color: #333;
+}
+
+/* Ajustes en la apariencia del popup */
+.leaflet-popup-content-wrapper {
+  font-family: 'Montserrat', sans-serif !important;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 1em;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+  border: 2px solid #180000;
+}
+
+
+/* Cambia el fondo del popup */
+.leaflet-popup-content-wrapper {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 1em;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+  border: 2px solid #180000;
+}
+
+/* Cambia la apariencia de la flecha del popup */
+.leaflet-popup-tip {
+  background: #99ff00;
+}
+
+
+   /* ======================================
+      Botón de estadísticas
+      ====================================== */
+   .estadisticasBoton {
+     text-align: center;
+     padding: 1em;
+   }
+   
+   .VerEstadisticas {
+     background-color: rgb(106, 0, 0);
+     color: #ffffff;
+     padding: 0.5em 1em;
+     border: none;
+     cursor: pointer;
+   }
+   
+   /* ======================================
+      Panel de capas
+      ====================================== */
+   .control-capas-panel {
+     background-color: #fff;
+     padding: 1em;
+     border-radius: 1em;
+     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+     margin: 10px 1em 0;
+     overflow: hidden;
+     color: #000;
+   }
+   
+   .lista-capas {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-family: 'Montserrat', sans-serif !important;
+    font-weight: 500 !important; /* Medium */
+    font-size: 1em;
+    color: #333;
+  }
+   
+  .lista-capas li {
+    display: flex;
+    align-items: center;
+    padding: 1px 0;
+    font-family: 'Montserrat', sans-serif !important;
+    font-weight: 500 !important;
+  }
+   
+   .lista-capas input[type="checkbox"] {
+     margin-right: 8px;
+   }
+   
+   /* ======================================
+      Estilos Responsivos
+      ====================================== */
+   @media (max-width:300px) {
+     .sidebar-container {
+       width: 70%;
+       max-width: 300px;
+     }
+     
+     .informacion {
+        width: 100%;
+        backdrop-filter: blur(10px);
+        background-color: rgb(57, 0, 0);
+        color: #ffffff;
+     }
+     
+     .sidebar-container.oculto {
+       transform: translateX(-100%);
+     }
+     
+     .toggle-btn {
+       left: calc(100% + 0px);
+     }
+
+
+     .map-container {
+      z-index: 1 !important;
+  }
+
+  .sidebar-container {
+      z-index: 10;
+  }
+
+  .informacion {
+      z-index: 5; 
+  }
+
+  .leaflet-pane {
+      z-index: 2 !important;
+  }
+
+
+  /* MODAL GRAFICA MOVIL */
+  .modal-content {
+    height: 80vh;
+    overflow-y: auto;
+}
+
+/* Asegurar que el modal tenga un margen en la parte superior e inferior */
+.modal-dialog {
+    margin: 0;
+    height: 95vh;
+    display: flex;
+    align-items: center;
+}
+
+/* Ajustar el body del modal para que no se desborde */
+.modal-body {
+    max-height: 85vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Contenedor del gráfico para que ocupe el espacio disponible */
+.chart-container {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%; /* Ocupa todo el espacio posible */
+    min-height: 300px; /* Altura mínima para evitar que sea demasiado pequeño */
+}
+
+/* Hacer que el canvas se ajuste */
+#estadisticasChart {
+    width: 10% !important;
+    height: 10% !important;
+}
+
+
+   }

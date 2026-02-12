@@ -1,0 +1,24 @@
+{
+  "name": "Geoportal Solicitudes Ciudadanas - Álvaro Obregón",
+  "short_name": "Geoportal",
+  "description": "Sistema de visualización de solicitudes ciudadanas",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#922B21",
+  "theme_color": "#922B21",
+  "orientation": "landscape-primary",
+  "icons": [
+    {
+      "src": "img/logo/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "img/logo/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
