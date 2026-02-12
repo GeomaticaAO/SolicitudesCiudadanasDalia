@@ -39,6 +39,11 @@
   <!-- Proj4js para transformación de coordenadas -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
 
+  <!-- Firebase CDN -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
 <style>
   /* Base */
   body { margin:0; font-family:'Montserrat', sans-serif; }
@@ -526,7 +531,7 @@
   .typing-indicator span {
     width: 8px;
     height: 8px;
-    backgroun20px;
+    border-radius: 50%;
     background: #fff8e1;
     border-bottom: 2px solid #ffd54f;
     font-size: 13px;
@@ -626,9 +631,183 @@
   .stats-bar span {
     margin-right: 20px;
   }
+
+  /* ========== ESTILOS PARA LOGIN ========== */
+  #loginContainer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #922B21 0%, #6d1f18 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+
+  .login-box {
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+  }
+
+  .login-box img {
+    width: 80px;
+    margin-bottom: 20px;
+  }
+
+  .login-box h2 {
+    color: #922B21;
+    margin-bottom: 10px;
+    font-size: 24px;
+    font-weight: 700;
+  }
+
+  .login-box p {
+    color: #666;
+    margin-bottom: 30px;
+    font-size: 14px;
+  }
+
+  .login-box input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-size: 14px;
+    transition: border-color 0.3s;
+  }
+
+  .login-box input:focus {
+    outline: none;
+    border-color: #922B21;
+  }
+
+  .login-box button {
+    background: #922B21;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    transition: background 0.3s;
+  }
+
+  .login-box button:hover {
+    background: #6d1f18;
+  }
+
+  #errorLogin {
+    color: #dc3545;
+    margin-top: 15px;
+    font-size: 13px;
+    min-height: 20px;
+  }
+
+  #geoportalContent {
+    display: none;
+  }
+
+  .logout-btn {
+    position: absolute;
+    top: 70px;
+    right: 20px;
+    background: #dc3545;
+    color: white;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    z-index: 1000;
+  }
+
+  .logout-btn:hover {
+    background: #c82333;
+  }
+
+  .user-info {
+    position: absolute;
+    top: 70px;
+    right: 140px;
+    background: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #922B21;
+    font-weight: 600;
+    z-index: 1000;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  /* Spinner de carga */
+  .spinner-container {
+    display: none;
+    margin-top: 15px;
+    text-align: center;
+  }
+
+  .spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #922B21;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .spinner-text {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #922B21;
+    font-weight: 500;
+  }
 </style>
 </head>
 <body>
+
+  <!-- ========== PANTALLA DE LOGIN ========== -->
+  <div id="loginContainer">
+    <div class="login-box">
+      <img src="img/logo/logo.png" alt="Logo">
+      <h2>Acceso al Geoportal</h2>
+      <p>Solicitudes Ciudadanas - Alcaldía Álvaro Obregón</p>
+      <form id="loginForm">
+        <input type="email" id="emailLogin" placeholder="Correo electrónico" required>
+        <input type="password" id="passwordLogin" placeholder="Contraseña" required>
+        <button type="submit" id="btnLogin">Iniciar Sesión</button>
+        <div class="spinner-container" id="loginSpinner" aria-live="polite" aria-hidden="true">
+          <div class="spinner" role="status" aria-label="Validando acceso"></div>
+          <div class="spinner-text">Validando acceso...</div>
+        </div>
+        <div id="errorLogin"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========== CONTENIDO DEL GEOPORTAL (oculto hasta login) ========== -->
+  <div id="geoportalContent">
+
+  <!-- Botón de cerrar sesión -->
+  <button class="logout-btn" id="btnLogout">Cerrar Sesión</button>
+  <div class="user-info" id="userInfo"></div>
 
   <!-- Encabezado -->
   <nav class="navbar navbar-expand-lg fixed-top">
@@ -888,6 +1067,7 @@
   var isRendering = false;
   var pendingRenderArgs = null;
   var renderizarDebounced = null;
+  var geoportalDataStarted = false;
   
   // Lista de colonias para autocompletado (fallback móvil)
   var coloniasList = [];
@@ -918,17 +1098,17 @@
   // 🔴 CONTROL DE LAZY LOADING: Marcadores NO se cargan al inicio
   var puntosYaCargados = false; // Se activan solo cuando usuario hace click en ojo
 
-  // Inicializar el mapa antes de cargar capas y datos
-  try {
-    map = L.map('map').setView([19.35, -99.2], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
-    
-
-  } catch (e) {
-    console.error('Error inicializando mapa:', e);
+  function inicializarMapaSiNecesario() {
+    if (map) return;
+    try {
+      map = L.map('map').setView([19.35, -99.2], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+    } catch (e) {
+      console.error('Error inicializando mapa:', e);
+    }
   }
 
   // FUNCIÓN ANTIGUA DESHABILITADA - Ver generarTablaResumen nueva en línea ~2509
@@ -4296,7 +4476,9 @@
       window.obtenerDatosParaIA = obtenerDatosParaIA;
       
       // Exponer funciones helper para consultas de IA
-      exponerFuncionesHelper();
+      if (typeof window.exponerFuncionesHelper === 'function') {
+        window.exponerFuncionesHelper();
+      }
       
       // ✅ NO ocultar loading aquí - dejamos que renderizar() lo maneje con su propio timeout
       // try { if (typeof hideLoading === 'function') hideLoading(); } catch(e){}
@@ -4381,8 +4563,14 @@
     };
   }
 
-  // ========== CARGAR ESTADISTICAS PRECALCULADAS ===========
-  fetch("archivos/precalculos/estadisticas.json")
+  function iniciarCargaGeoportal() {
+    if (geoportalDataStarted) return;
+    geoportalDataStarted = true;
+    window.exponerFuncionesHelper = exponerFuncionesHelper;
+    inicializarMapaSiNecesario();
+
+    // ========== CARGAR ESTADISTICAS PRECALCULADAS ===========
+    fetch("archivos/precalculos/estadisticas.json")
     .then(res => res.json())
     .then(data => {
       statsData = data;
@@ -5197,6 +5385,8 @@
     console.log("🎉 Carga completa de todos los meses");
   });
   */
+
+  }
 
   // ========== EVENT LISTENERS ==========
   let btnAplicarFiltros = document.getElementById("btnAplicarFiltros");
@@ -7202,6 +7392,171 @@ function crearTablaEnChat(columnas, filas, titulo) {
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
+</script>
+
+</div> <!-- Fin de geoportalContent -->
+
+<!-- ========== FIREBASE AUTHENTICATION ========== -->
+<script>
+  // Configuración de Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyBu_-ViuSPQVZS2z6CGPsNpDOvF1xfZIbc",
+    authDomain: "solicitudesciudadanasdalia.firebaseapp.com",
+    projectId: "solicitudesciudadanasdalia",
+    storageBucket: "solicitudesciudadanasdalia.firebasestorage.app",
+    messagingSenderId: "553000274461",
+    appId: "1:553000274461:web:9b788127280e810b8cd4f4"
+  };
+
+  // Inicializar Firebase
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  let logoutSolicitado = false;
+
+  setTimeout(() => {
+    const emailInput = document.getElementById('emailLogin');
+    if (emailInput) emailInput.focus();
+  }, 0);
+
+  // ✅ IMPORTANTE: Deshabilitar persistencia de sesión (cerrar sesión en cada recarga)
+  auth.setPersistence(firebase.auth.Auth.Persistence.NONE);
+
+  // Obtener IP del usuario
+  async function getClientIP() {
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      return data.ip;
+    } catch {
+      return 'desconocida';
+    }
+  }
+
+  // Registrar acceso en Firestore
+  async function registrarAcceso(email) {
+    try {
+      const ip = await getClientIP();
+      await db.collection('accesos').add({
+        email: email,
+        ip: ip,
+        fecha: new Date(),
+        dispositivo: navigator.userAgent,
+        navegador: navigator.userAgent.split(')')[0].split('(')[1] || 'desconocido'
+      });
+      console.log('✅ Acceso registrado en Firestore');
+    } catch (error) {
+      console.error('❌ Error registrando acceso:', error);
+    }
+  }
+
+  // Login
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('emailLogin').value;
+    const password = document.getElementById('passwordLogin').value;
+    const errorDiv = document.getElementById('errorLogin');
+    const spinner = document.getElementById('loginSpinner');
+    const btnLogin = document.getElementById('btnLogin');
+
+    errorDiv.textContent = 'Verificando credenciales...';
+    errorDiv.style.color = '#922B21';
+    spinner.style.display = 'block';
+    spinner.setAttribute('aria-hidden', 'false');
+    btnLogin.disabled = true;
+    btnLogin.style.opacity = '0.7';
+    btnLogin.style.cursor = 'not-allowed';
+
+    try {
+      await auth.signInWithEmailAndPassword(email, password);
+      mostrarGeoportal(email);
+      registrarAcceso(email).catch((e) => {
+        console.warn('No se pudo registrar acceso (no bloqueante):', e);
+      });
+    } catch (error) {
+      errorDiv.style.color = '#dc3545';
+      if (
+        error.code === 'auth/user-not-found' ||
+        error.code === 'auth/wrong-password' ||
+        error.code === 'auth/invalid-credential' ||
+        error.code === 'auth/invalid-login-credentials'
+      ) {
+        errorDiv.textContent = 'Usuario o Contraseña no válidos';
+      } else if (error.code === 'auth/invalid-email') {
+        errorDiv.textContent = 'Email inválido';
+      } else {
+        errorDiv.textContent = 'Error: ' + error.message;
+      }
+    } finally {
+      spinner.style.display = 'none';
+      spinner.setAttribute('aria-hidden', 'true');
+      btnLogin.disabled = false;
+      btnLogin.style.opacity = '1';
+      btnLogin.style.cursor = 'pointer';
+    }
+  });
+
+  // Logout
+  document.getElementById('btnLogout').addEventListener('click', () => {
+    logoutSolicitado = true;
+    auth.signOut();
+  });
+
+  // Mostrar geoportal
+  function mostrarGeoportal(email) {
+    document.getElementById('loginContainer').style.display = 'none';
+    document.getElementById('geoportalContent').style.display = 'block';
+    document.getElementById('userInfo').textContent = '👤 ' + email;
+    iniciarCargaGeoportal();
+    
+    // ✅ IMPORTANTE: Recalcular tamaño del mapa y restaurar vista correcta
+    setTimeout(() => {
+      if (typeof map !== 'undefined' && map) {
+        map.invalidateSize();
+        map.setView([19.35, -99.2], 13);
+      }
+    }, 100);
+  }
+
+  // Ocultar geoportal
+  function ocultarGeoportal(limpiarCampos = false) {
+    document.getElementById('loginContainer').style.display = 'flex';
+    document.getElementById('geoportalContent').style.display = 'none';
+    if (limpiarCampos) {
+      document.getElementById('emailLogin').value = '';
+      document.getElementById('passwordLogin').value = '';
+      document.getElementById('errorLogin').textContent = '';
+    }
+
+    const spinner = document.getElementById('loginSpinner');
+    const btnLogin = document.getElementById('btnLogin');
+    if (spinner) {
+      spinner.style.display = 'none';
+      spinner.setAttribute('aria-hidden', 'true');
+    }
+    if (btnLogin) {
+      btnLogin.disabled = false;
+      btnLogin.style.opacity = '1';
+      btnLogin.style.cursor = 'pointer';
+    }
+
+    setTimeout(() => {
+      const emailInput = document.getElementById('emailLogin');
+      if (emailInput) emailInput.focus();
+    }, 0);
+  }
+
+  // Verificar estado de autenticación (pero NO auto-login)
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      console.log('✅ Usuario autenticado:', user.email);
+      // NO mostrar geoportal automáticamente - solo en login exitoso
+    } else {
+      console.log('❌ No hay usuario autenticado');
+      ocultarGeoportal(logoutSolicitado);
+      logoutSolicitado = false;
+    }
+  });
 </script>
 
 </body>
