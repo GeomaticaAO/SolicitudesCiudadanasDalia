@@ -1536,8 +1536,8 @@
               console.log('🗺️ seccionesLayer visible:', map.hasLayer(seccionesLayer));
               console.log('📍 Bounds:', seccionesLayer.getBounds());
               
-              // Ocultar loading si está visible
-              try { hideLoading(); } catch(e) { console.log("hideLoading no disponible"); }
+              // ✅ NO ocultar loading aquí - dejar que renderizar() controle el timing
+              // try { hideLoading(); } catch(e) { console.log("hideLoading no disponible"); }
               
               // Forzar refresco del mapa
               map.invalidateSize();
@@ -1644,7 +1644,7 @@
       console.log('⚠️ Renderizado cancelado: datos no disponibles');
       console.log(`   solicitudes: ${solicitudes?.length || 0}, solicitudesGeoJSON: ${solicitudesGeoJSON ? 'SÍ' : 'NO'}`);
       isRendering = false; // ✅ CRITICAL: liberar flag para permitir retry
-      try { hideLoading(); } catch(e){}
+      // ✅ NO ocultar loading aquí - solo estamos esperando datos
       return;
     }
     
@@ -2676,12 +2676,13 @@
       }
     }
 
-    // Ocultar overlay al terminar render (delay mayor en móviles)
+    // Ocultar overlay al terminar render - esperar a que TODA la renderización esté completa
     try { 
+      // Esperar tiempo significativo para que mapa, gráficas y datos se carguen completamente
       setTimeout(function() {
         hideLoading();
         console.log('✅ Renderizado completo. Loading oculto.');
-      }, isMobile ? 800 : 500); 
+      }, isMobile ? 8000 : 7000); 
     } catch(e){
       console.log('❌ Error ocultando loading:', e);
     }
@@ -4196,20 +4197,58 @@
       selectEstado.appendChild(opt);
     });
 
-    let mesesUnicos = (statsData && statsData.values && statsData.values.mes)
-      ? statsData.values.mes
-      : [...new Set(solicitudes.map(s => {
-        if (!s["Fecha reporte"]) return null;
-        let fecha = new Date(s["Fecha reporte"]);
-        if (isNaN(fecha)) return null;
-        return fecha.toLocaleString('es-ES', { month: 'long' });
-      }).filter(Boolean))];
+    // Extraer meses únicos con año para ordenar cronológicamente
+    let mesesConAnioSet = new Set();
+    let mesesConMetadata = new Map(); // Guardar año para cada mes
+    
+    solicitudes.forEach(s => {
+      if (!s["Fecha reporte"]) return;
+      let fecha = new Date(s["Fecha reporte"]);
+      if (isNaN(fecha)) return;
+      
+      const mes = fecha.getMonth(); // 0-11
+      const anio = fecha.getFullYear();
+      const nombresMeses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+                            'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+      const mesNombre = nombresMeses[mes];
+      const claveTiempo = `${anio}-${(mes + 1).toString().padStart(2, '0')}`; // "2025-06" para ordenar
+      
+      mesesConAnioSet.add(claveTiempo);
+      if (!mesesConMetadata.has(mesNombre)) {
+        mesesConMetadata.set(mesNombre, []);
+      }
+      if (!mesesConMetadata.get(mesNombre).includes(anio)) {
+        mesesConMetadata.get(mesNombre).push(anio);
+      }
+    });
+    
+    // Ordenar cronológicamente (ascendente: junio 2025 primero, enero 2026 al final)
+    let mesesOrdenados = Array.from(mesesConAnioSet).sort((a, b) => {
+      const [yearA, monthA] = a.split('-').map(Number);
+      const [yearB, monthB] = b.split('-').map(Number);
+      if (yearA !== yearB) return yearA - yearB;
+      return monthA - monthB;
+    });
+    
+    // Convertir a formato legible y preparar opciones
+    const nombresCompletos = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                              'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const nombresMinusculas = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+                               'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    
+    let mesesFormateados = mesesOrdenados.map(clave => {
+      const [year, month] = clave.split('-').map(Number);
+      return {
+        valor: nombresMinusculas[month - 1], // Usar nombre mes min.para filtrado ("junio")
+        label: `${nombresCompletos[month - 1]} ${year}` // Mostrar "Junio 2025"
+      };
+    });
 
     let selectMes = document.getElementById("filtroMes");
-    mesesUnicos.forEach(m => {
+    mesesFormateados.forEach(m => {
       let opt = document.createElement("option");
-      opt.value = m;
-      opt.textContent = m.charAt(0).toUpperCase() + m.slice(1);
+      opt.value = m.valor; // Usar "junio", "julio", etc.
+      opt.textContent = m.label; // Mostrar "Junio 2025"
       selectMes.appendChild(opt);
     });
   }
@@ -4259,7 +4298,8 @@
       // Exponer funciones helper para consultas de IA
       exponerFuncionesHelper();
       
-      try { if (typeof hideLoading === 'function') hideLoading(); } catch(e){}
+      // ✅ NO ocultar loading aquí - dejamos que renderizar() lo maneje con su propio timeout
+      // try { if (typeof hideLoading === 'function') hideLoading(); } catch(e){}
     }
   }
 
