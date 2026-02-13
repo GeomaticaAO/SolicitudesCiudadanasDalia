@@ -5276,81 +5276,98 @@
   // Cargar todos los meses en paralelo (más rápido)
   console.log("📥 Iniciando carga de solicitudes por mes...");
   
-  // ✅ PRIMERO: Cargar archivo completo Solicitudes.geojson para incluir TODAS las solicitudes
-  fetch("archivos/solicitudes/Solicitudes.geojson")
-    .then(res => res.json())
-    .then(data => {
-      console.log(`📥 Cargadas ${data.features.length} solicitudes del archivo completo`);
-      
-      // Guardar el GeoJSON completo
-      solicitudesGeoJSON = data;
-      
-      // Procesar features del archivo completo
-      data.features.forEach(f => {
-        if (!f.geometry || f.geometry.type !== "Point" || !Array.isArray(f.geometry.coordinates)) return;
-        
-        const rawCol = f.properties["name"] || f.properties["NOMBRE"] || f.properties["colonia"] || null;
-        const tipo = f.properties["Tipo de reporte"] || "Sin tipo";
-        const estado = f.properties["Estado Reporte"] || "Sin estado";
-        
-        // Determinar mes de los datos
-        let nombreMes = "desconocido";
-        if (f.properties["Fecha reporte"]) {
-          const fecha = new Date(f.properties["Fecha reporte"]);
-          if (!isNaN(fecha)) {
-            nombreMes = fecha.toLocaleString('es-ES', { month: 'long' });
-          }
-        }
-        
-        // ✅ GUARDAR ID ANTES de hacer push
-        const globalIdx = solicitudes.length;
-        
-        const solicitud = {
-          "Número folio": f.properties["Número folio"],
-          "Tipo de reporte": tipo,
-          "Estado Reporte": estado,
-          "Fecha reporte": f.properties["Fecha reporte"],
-          "Nombre Ciudadano": f.properties["Nombre Ciudadano"],
-          "Teléfono": f.properties["Teléfono"],
-          "Punto de referencia": f.properties["Punto de referencia"],
-          "Coordenada X": f.geometry.coordinates[0],
-          "Coordenada Y": f.geometry.coordinates[1],
-          "Colonia": rawCol,
-          "ColoniaNorm": normalizeKey(rawCol),
-          "seccion": f.properties["seccion"] || f.properties["SECCION"],
-          "transi": f.properties["transi"] || f.properties["Transi"] || f.properties["TRANSI"],
-          "mes": nombreMes,
-          "_globalId": globalIdx,
-          "_id": globalIdx
-        };
-        
-        solicitudes.push(solicitud);
-        allIds.push(globalIdx);
-      });
-      
-      console.log(`✅ Total de solicitudes cargadas (archivo completo): ${solicitudes.length}`);
-      console.log(`   solicitudesGeoJSON establecido: ${solicitudesGeoJSON ? 'SÍ' : 'NO'}`);
-      console.log(`   solicitudesGeoJSON.features: ${solicitudesGeoJSON?.features?.length || 0}`);
+  if (modoIOSLigero) {
+    console.log("📱 iOS ligero: cargando solo meses separados para reducir memoria");
+    Promise.all([
+      cargarMes('junio', 'Mes_junio.geojson'),
+      cargarMes('julio', 'Mes_julio.geojson'),
+      cargarMes('agosto', 'Mes_agosto.geojson'),
+      cargarMes('septiembre', 'Mes_septiembre.geojson'),
+      cargarMes('octubre', 'Mes_octubre.geojson'),
+      cargarMes('noviembre', 'Mes_noviembre.geojson'),
+      cargarMes('diciembre', 'Mes_diciembre.geojson')
+    ]).then(() => {
+      console.log("🎉 Carga completa de meses en iOS");
       solicitudesLoaded = true;
       iniciarSiTodoEstaListo();
-    })
-    .catch(err => {
-      console.warn("⚠️ No se pudo cargar archivo completo, continuando con meses separados:", err);
-      // Continuar con los meses separados
-      Promise.all([
-        cargarMes('junio', 'Mes_junio.geojson'),
-        cargarMes('julio', 'Mes_julio.geojson'),
-        cargarMes('agosto', 'Mes_agosto.geojson'),
-        cargarMes('septiembre', 'Mes_septiembre.geojson'),
-        cargarMes('octubre', 'Mes_octubre.geojson'),
-        cargarMes('noviembre', 'Mes_noviembre.geojson'),
-        cargarMes('diciembre', 'Mes_diciembre.geojson')
-      ]).then(() => {
-        console.log("🎉 Carga completa de todos los meses");
+    });
+  } else {
+    // ✅ PRIMERO: Cargar archivo completo Solicitudes.geojson para incluir TODAS las solicitudes
+    fetch("archivos/solicitudes/Solicitudes.geojson")
+      .then(res => res.json())
+      .then(data => {
+        console.log(`📥 Cargadas ${data.features.length} solicitudes del archivo completo`);
+        
+        // Guardar el GeoJSON completo
+        solicitudesGeoJSON = data;
+        
+        // Procesar features del archivo completo
+        data.features.forEach(f => {
+          if (!f.geometry || f.geometry.type !== "Point" || !Array.isArray(f.geometry.coordinates)) return;
+          
+          const rawCol = f.properties["name"] || f.properties["NOMBRE"] || f.properties["colonia"] || null;
+          const tipo = f.properties["Tipo de reporte"] || "Sin tipo";
+          const estado = f.properties["Estado Reporte"] || "Sin estado";
+          
+          // Determinar mes de los datos
+          let nombreMes = "desconocido";
+          if (f.properties["Fecha reporte"]) {
+            const fecha = new Date(f.properties["Fecha reporte"]);
+            if (!isNaN(fecha)) {
+              nombreMes = fecha.toLocaleString('es-ES', { month: 'long' });
+            }
+          }
+          
+          // ✅ GUARDAR ID ANTES de hacer push
+          const globalIdx = solicitudes.length;
+          
+          const solicitud = {
+            "Número folio": f.properties["Número folio"],
+            "Tipo de reporte": tipo,
+            "Estado Reporte": estado,
+            "Fecha reporte": f.properties["Fecha reporte"],
+            "Nombre Ciudadano": f.properties["Nombre Ciudadano"],
+            "Teléfono": f.properties["Teléfono"],
+            "Punto de referencia": f.properties["Punto de referencia"],
+            "Coordenada X": f.geometry.coordinates[0],
+            "Coordenada Y": f.geometry.coordinates[1],
+            "Colonia": rawCol,
+            "ColoniaNorm": normalizeKey(rawCol),
+            "seccion": f.properties["seccion"] || f.properties["SECCION"],
+            "transi": f.properties["transi"] || f.properties["Transi"] || f.properties["TRANSI"],
+            "mes": nombreMes,
+            "_globalId": globalIdx,
+            "_id": globalIdx
+          };
+          
+          solicitudes.push(solicitud);
+          allIds.push(globalIdx);
+        });
+        
+        console.log(`✅ Total de solicitudes cargadas (archivo completo): ${solicitudes.length}`);
+        console.log(`   solicitudesGeoJSON establecido: ${solicitudesGeoJSON ? 'SÍ' : 'NO'}`);
+        console.log(`   solicitudesGeoJSON.features: ${solicitudesGeoJSON?.features?.length || 0}`);
         solicitudesLoaded = true;
         iniciarSiTodoEstaListo();
+      })
+      .catch(err => {
+        console.warn("⚠️ No se pudo cargar archivo completo, continuando con meses separados:", err);
+        // Continuar con los meses separados
+        Promise.all([
+          cargarMes('junio', 'Mes_junio.geojson'),
+          cargarMes('julio', 'Mes_julio.geojson'),
+          cargarMes('agosto', 'Mes_agosto.geojson'),
+          cargarMes('septiembre', 'Mes_septiembre.geojson'),
+          cargarMes('octubre', 'Mes_octubre.geojson'),
+          cargarMes('noviembre', 'Mes_noviembre.geojson'),
+          cargarMes('diciembre', 'Mes_diciembre.geojson')
+        ]).then(() => {
+          console.log("🎉 Carga completa de todos los meses");
+          solicitudesLoaded = true;
+          iniciarSiTodoEstaListo();
+        });
       });
-    });
+  }
 
   // Cargar todos los meses en paralelo (complemento del archivo completo)
   // Descomentar si hay duplicados y se necesita deduplicación
@@ -6521,6 +6538,22 @@
     });
   } else if (isIOS) {
     console.log('ℹ️ Service Worker deshabilitado en iOS para evitar recargas/bloqueos');
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.getRegistrations()
+          .then(registrations => Promise.all(registrations.map(r => r.unregister())))
+          .then(() => {
+            console.log('🧹 Service Workers antiguos eliminados en iOS');
+            if ('caches' in window) {
+              return caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))));
+            }
+          })
+          .then(() => {
+            console.log('🧹 Caché limpiada en iOS');
+          })
+          .catch(err => console.log('⚠️ No se pudo limpiar SW/caché en iOS:', err));
+      });
+    }
   }
 
 </script>
