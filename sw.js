@@ -23,19 +23,22 @@ self.addEventListener('install', event => {
 // Interceptar peticiones con estrategia Network First para archivos críticos
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
+  const isGeojson = url.pathname.endsWith('.geojson');
   
   // Network First para index.html y archivos .geojson (siempre obtener la última versión)
   if (url.pathname.endsWith('index.html') || 
       url.pathname.endsWith('Index.html') || 
-      url.pathname.endsWith('.geojson')) {
+      isGeojson) {
     event.respondWith(
       fetch(event.request)
         .then(response => {
-          // Clonar respuesta para cachear
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, responseClone);
-          });
+          // Evitar cachear GeoJSON pesados para no saturar memoria/cuota en iOS
+          if (!isGeojson) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, responseClone);
+            });
+          }
           return response;
         })
         .catch(() => {

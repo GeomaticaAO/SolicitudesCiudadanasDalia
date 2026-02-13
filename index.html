@@ -1012,6 +1012,8 @@
   // ========== VARIABLES GLOBALES ==========
   // Detectar si es móvil (RECALCULAR dinámicamente)
   let isMobile = window.innerWidth <= 768;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   
   // Declaraciones e inicialización de variables globales usadas en el script
   var map;
@@ -1068,6 +1070,7 @@
   var pendingRenderArgs = null;
   var renderizarDebounced = null;
   var geoportalDataStarted = false;
+  var modoIOSLigero = isIOS;
   
   // Lista de colonias para autocompletado (fallback móvil)
   var coloniasList = [];
@@ -2001,7 +2004,7 @@
     }
 
     // ========== GRÁFICAS ==========
-    const chartLimit = isMobile ? 6 : 10; // En móviles mostrar solo 6 para mejor rendimiento
+    const chartLimit = modoIOSLigero ? 4 : (isMobile ? 6 : 10); // En iOS reducir carga inicial
     function prepararDatos(obj) {
       let arr = Object.entries(obj);
       arr.sort((a, b) => b[1] - a[1]);
@@ -2151,6 +2154,7 @@
             legend: { position: 'bottom', labels: { font: { size: 10 } } },
             datalabels: {
               display: function(context) {
+                if (modoIOSLigero) return false;
                 // Solo mostrar en el último segmento (No compete)
                 return context.datasetIndex === context.chart.data.datasets.length - 1;
               },
@@ -2212,6 +2216,7 @@
             },
             legend: { display: false },
             datalabels: {
+              display: !modoIOSLigero,
               anchor: 'end',
               align: 'end',
               formatter: (value) => value.toLocaleString('es-MX'),
@@ -2299,6 +2304,7 @@
             legend: { position: 'bottom', labels: { font: { size: 10 } } },
             datalabels: {
               display: function(context) {
+                if (modoIOSLigero) return false;
                 // Solo mostrar en el último segmento (No compete)
                 return context.datasetIndex === context.chart.data.datasets.length - 1;
               },
@@ -2360,6 +2366,7 @@
             },
             legend: { display: false },
             datalabels: {
+              display: !modoIOSLigero,
               anchor: 'end',
               align: 'end',
               formatter: (value) => value.toLocaleString('es-MX'),
@@ -2419,6 +2426,16 @@
       if (totalSpan) {
         totalSpan.innerHTML = `<span style="font-size:1.1em">${totalSolicitudes.toLocaleString('es-MX')}</span>`;
       }
+
+      if (modoIOSLigero) {
+        const spanPrimarias = document.getElementById("vialidadesPrimarias");
+        const spanLocales = document.getElementById("vialidadesLocales");
+
+        if (statsData?.meta?.vialidades) {
+          if (spanPrimarias) spanPrimarias.textContent = Number(statsData.meta.vialidades.primarias || 0).toLocaleString('es-MX');
+          if (spanLocales) spanLocales.textContent = Number(statsData.meta.vialidades.locales || 0).toLocaleString('es-MX');
+        }
+      } else {
 
       // ========== CALCULAR VIALIDADES DINÁMICAMENTE SEGÚN FILTROS ==========
       // Obtener IDs filtrados para calcular vialidades
@@ -2554,6 +2571,7 @@
         const spanLocales = document.getElementById("vialidadesLocales");
         if (spanPrimarias) spanPrimarias.textContent = enVialidadesPrimarias.toLocaleString('es-MX');
         if (spanLocales) spanLocales.textContent = enVialidadesLocales.toLocaleString('es-MX');
+      }
       }
     } catch (e) {
       console.log('Error actualizando contador:', e);
@@ -2862,7 +2880,7 @@
       setTimeout(function() {
         hideLoading();
         console.log('✅ Renderizado completo. Loading oculto.');
-      }, isMobile ? 8000 : 7000); 
+      }, modoIOSLigero ? 2500 : (isMobile ? 8000 : 7000)); 
     } catch(e){
       console.log('❌ Error ocultando loading:', e);
     }
@@ -4487,8 +4505,6 @@
 
   function mostrarMetricasStartup() {
     const totalSolicitudes = solicitudes.length;
-    let vialidadesPrimarias = 0;
-    let vialidadesLocales = 0;
     
     // Usar stats precalculadas si están disponibles
     if (statsData && statsData.coords) {
@@ -4502,53 +4518,19 @@
       console.log("📊 MÉTRICAS DE STARTUP:");
       console.log(`   Total solicitudes: ${totalSolicitudes}`);
     }
-    
-    // Calcular solicitudes en vialidades si vialidadesLayer está disponible
-    if (vialidadesLayer && vialidadesLayer.toGeoJSON) {
-      try {
-        const vialidadesGeoJSON = vialidadesLayer.toGeoJSON();
-        const features = vialidadesGeoJSON.features || [];
-        
-        // Contar solicitudes en cada vialidad
-        solicitudes.forEach(sol => {
-          const coords = sol.geometry?.coordinates;
-          if (coords && coords.length >= 2) {
-            const point = [coords[1], coords[0]]; // lat, lon para turf
-            
-            features.forEach(feature => {
-              if (feature.geometry && feature.geometry.type === 'Polygon') {
-                try {
-                  // Verificar si el punto está en el polígono
-                  const inPoly = turf.booleanPointInPolygon(point, feature);
-                  if (inPoly) {
-                    // Determinar si es primaria o local por el nombre/tipo
-                    const tipo = (feature.properties?.TIPO_VIA || '').toUpperCase();
-                    if (tipo.includes('PRIMARIA') || tipo.includes('PRIMARY')) {
-                      vialidadesPrimarias++;
-                    } else {
-                      vialidadesLocales++;
-                    }
-                  }
-                } catch(e) {
-                  // Ignorar errores en cálculo de puntos en polígono
-                }
-              }
-            });
-          }
-        });
-        
-        console.log(`   Vialidades primarias: ${vialidadesPrimarias}`);
-        console.log(`   Vialidades locales: ${vialidadesLocales}`);
-        
-        // ✅ Tooltip de métricas deshabilitado por solicitud del usuario
-        // (No mostrar popup en la parte superior derecha del mapa)
-        
-      } catch(e) {
-        console.error("Error calculando métricas de vialidades:", e);
-      }
-    } else {
-      console.log("   Vialidades layer no disponible aún para cálculo");
+
+    if (statsData?.meta?.vialidades) {
+      console.log(`   Vialidades primarias: ${statsData.meta.vialidades.primarias}`);
+      console.log(`   Vialidades locales: ${statsData.meta.vialidades.locales}`);
+      return;
     }
+
+    if (isIOS) {
+      console.log("   Métricas detalladas de vialidades omitidas en iOS por rendimiento");
+      return;
+    }
+
+    console.log("   Vialidades layer no disponible aún para cálculo");
   }
 
   // ========== FUNCIÓN PARA OBTENER DATOS PROCESADOS ==========
@@ -6531,12 +6513,14 @@
   window.addEventListener('orientationchange', checkOrientation);
 
   // Service Worker
-  if ('serviceWorker' in navigator) {
+  if ('serviceWorker' in navigator && !isIOS) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js')
         .then(reg => console.log('✅ Service Worker registrado:', reg.scope))
         .catch(err => console.log('❌ Error registrando Service Worker:', err));
     });
+  } else if (isIOS) {
+    console.log('ℹ️ Service Worker deshabilitado en iOS para evitar recargas/bloqueos');
   }
 
 </script>
@@ -7561,4 +7545,3 @@ function crearTablaEnChat(columnas, filas, titulo) {
 
 </body>
 </html>
-
