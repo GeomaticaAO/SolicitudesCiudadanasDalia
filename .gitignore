@@ -1,0 +1,5 @@
+tools/serviceAccountKey.json
+accesos.csv
+__pycache__/
+*.pyc
+tools/solicitudesciudadanasdalia-firebase-adminsdk-fbsvc-4b2e100b61.json

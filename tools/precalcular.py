@@ -198,6 +198,7 @@ def count_in_vialidades(features_list, vialidades_data):
         "primarias": 0,
         "locales": 0,
         "error_coords": 0,
+        "intersecciones": 0,
     }
     
     vial_features = vialidades_data.get("features", [])
@@ -276,6 +277,7 @@ def count_in_vialidades(features_list, vialidades_data):
     
     # Calcular locales como la diferencia: total - primarias - errores
     result["locales"] = result["total"] - result["primarias"] - result["error_coords"]
+    result["intersecciones"] = result["error_coords"]
     
     return result
 
