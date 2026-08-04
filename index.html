@@ -1952,6 +1952,7 @@
           console.log("🔄 Checkbox secciones cambiado. Checked:", this.checked);
           
           if (this.checked) {
+            try { showLoading(); } catch(e) {}
             if (!map.hasLayer(seccionesLayer)) {
               console.log("➕ Agregando seccionesLayer al mapa...");
               seccionesLayer.addTo(map);
@@ -2702,7 +2703,10 @@
             const idx = Math.round(rawIdx);
             if (idx < 0 || idx >= chart.data.labels.length) return;
             const coloniaLabel = chart.data.labels[idx];
-            if (coloniaLabel) seleccionarColoniaEnMapa(coloniaLabel);
+            if (coloniaLabel) {
+              try { showLoading(); } catch(e) {}
+              seleccionarColoniaEnMapa(coloniaLabel);
+            }
           },
           scales: {
             x: { stacked: true, ticks: { precision: 0 } },
@@ -5243,6 +5247,7 @@
 
           layer.on('click', function(e) {
             if (L && L.DomEvent) L.DomEvent.stopPropagation(e);
+            try { showLoading(); } catch(e) {}
 
             if (selectedOutline) {
               map.removeLayer(selectedOutline);
@@ -5371,6 +5376,7 @@
               layer.on('click', function(e) {
                 try {
                   if (L && L.DomEvent) L.DomEvent.stopPropagation(e);
+                  try { showLoading(); } catch(e) {}
 
                   if (selectedOutline) {
                     map.removeLayer(selectedOutline);
@@ -5838,6 +5844,7 @@
   }
 
   function seleccionarColoniaEnMapa(valorColonia) {
+    try { showLoading(); } catch(e) {}
     if (!valorColonia || !coloniasLayer || !map) return false;
 
     const valorNorm = normalizeKey(valorColonia);
@@ -5906,6 +5913,8 @@
   // Agregar listeners solo una vez
   if (btnAplicarFiltros && !btnAplicarFiltros.hasListener) {
     btnAplicarFiltros.addEventListener("click", () => {
+      // Feedback inmediato al usuario antes del debounce/render.
+      try { showLoading(); } catch(e) {}
       const tipo = selectFiltroTipo.value;
       const estado = selectFiltroEstado.value;
       const mes = selectFiltroMes.value;
@@ -5920,8 +5929,13 @@
 
   if (btnBuscarGeneral && !btnBuscarGeneral.hasListener) {
     btnBuscarGeneral.addEventListener("click", () => {
+      // Mostrar mensaje de carga desde el clic de búsqueda.
+      try { showLoading(); } catch(e) {}
       let valor = document.getElementById("buscadorGeneral").value.trim();
-      if (!valor) return;
+      if (!valor) {
+        try { hideLoading(); } catch(e) {}
+        return;
+      }
 
       let solicitud = solicitudes.find(s => s["Número folio"] == valor);
       if (solicitud) {
@@ -6018,6 +6032,7 @@
       }
 
       alert("No se encontró folio, colonia ni sección con: " + valor);
+      try { hideLoading(); } catch(e) {}
     });
     btnBuscarGeneral.hasListener = true;
   }
