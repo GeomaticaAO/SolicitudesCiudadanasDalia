@@ -1722,6 +1722,30 @@
     } catch (e) { console.log('hideLoading error', e); }
   }
 
+  // Ejecuta trabajo pesado en el siguiente ciclo para permitir pintar el overlay primero.
+  function runAfterLoadingPaint(task) {
+    try { showLoading(); } catch (e) {}
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        try {
+          if (typeof task === 'function') task();
+        } catch (e) {
+          console.log('runAfterLoadingPaint error', e);
+        }
+      }, 0);
+    });
+  }
+
+  function triggerRenderWithLoading(tipo, estado, mes, useDebounce = false) {
+    runAfterLoadingPaint(() => {
+      if (useDebounce && typeof renderizarDebounced === 'function') {
+        renderizarDebounced(tipo, estado, mes);
+      } else {
+        renderizar(tipo, estado, mes);
+      }
+    });
+  }
+
   // ========== PRECÁLCULO DE ÍNDICES Y ESTADÍSTICAS ==========
   function precalcularIndices() {
     solicitudPorId = {};
@@ -1952,35 +1976,35 @@
           console.log("🔄 Checkbox secciones cambiado. Checked:", this.checked);
           
           if (this.checked) {
-            try { showLoading(); } catch(e) {}
-            if (!map.hasLayer(seccionesLayer)) {
-              console.log("➕ Agregando seccionesLayer al mapa...");
-              seccionesLayer.addTo(map);
-              showSecciones = true;
-              
-              console.log('✅ Secciones agregadas. Total layers en mapa:', Object.keys(map._layers).length);
-              console.log('🗺️ seccionesLayer visible:', map.hasLayer(seccionesLayer));
-              console.log('📍 Bounds:', seccionesLayer.getBounds());
-              
-              // ✅ NO ocultar loading aquí - dejar que renderizar() controle el timing
-              // try { hideLoading(); } catch(e) { console.log("hideLoading no disponible"); }
-              
-              // Forzar refresco del mapa
-              map.invalidateSize();
-              
-              // Forzar renderizado con estilos correctos después de un delay
-              setTimeout(function() {
-                try {
-                  const tipo = document.getElementById('filtroTipo')?.value || 'Todos';
-                  const estado = document.getElementById('filtroEstado')?.value || 'Todos';
-                  const mes = document.getElementById('filtroMes')?.value || 'Todos';
-                  console.log('🔄 Aplicando renderizado con filtros:', tipo, estado, mes);
-                  renderizar(tipo, estado, mes);
-                } catch (e) {
-                  console.error('❌ Error al renderizar secciones:', e);
-                }
-              }, 100);
-            }
+            runAfterLoadingPaint(() => {
+              if (!map.hasLayer(seccionesLayer)) {
+                console.log("➕ Agregando seccionesLayer al mapa...");
+                seccionesLayer.addTo(map);
+                showSecciones = true;
+                
+                console.log('✅ Secciones agregadas. Total layers en mapa:', Object.keys(map._layers).length);
+                console.log('🗺️ seccionesLayer visible:', map.hasLayer(seccionesLayer));
+                console.log('📍 Bounds:', seccionesLayer.getBounds());
+                
+                // Forzar refresco del mapa
+                map.invalidateSize();
+                
+                // Forzar renderizado con estilos correctos después de un delay
+                setTimeout(function() {
+                  try {
+                    const tipo = document.getElementById('filtroTipo')?.value || 'Todos';
+                    const estado = document.getElementById('filtroEstado')?.value || 'Todos';
+                    const mes = document.getElementById('filtroMes')?.value || 'Todos';
+                    console.log('🔄 Aplicando renderizado con filtros:', tipo, estado, mes);
+                    renderizar(tipo, estado, mes);
+                  } catch (e) {
+                    console.error('❌ Error al renderizar secciones:', e);
+                  }
+                }, 100);
+              } else {
+                hideLoading();
+              }
+            });
           } else {
             console.log("➖ Removiendo seccionesLayer del mapa...");
             if (map.hasLayer(seccionesLayer)) {
@@ -2704,8 +2728,9 @@
             if (idx < 0 || idx >= chart.data.labels.length) return;
             const coloniaLabel = chart.data.labels[idx];
             if (coloniaLabel) {
-              try { showLoading(); } catch(e) {}
-              seleccionarColoniaEnMapa(coloniaLabel);
+              runAfterLoadingPaint(() => {
+                seleccionarColoniaEnMapa(coloniaLabel);
+              });
             }
           },
           scales: {
@@ -5247,31 +5272,31 @@
 
           layer.on('click', function(e) {
             if (L && L.DomEvent) L.DomEvent.stopPropagation(e);
-            try { showLoading(); } catch(e) {}
+            runAfterLoadingPaint(() => {
+              if (selectedOutline) {
+                map.removeLayer(selectedOutline);
+                selectedOutline = null;
+              }
 
-            if (selectedOutline) {
-              map.removeLayer(selectedOutline);
-              selectedOutline = null;
-            }
+              selectedOutline = L.geoJSON(layer.toGeoJSON(), {
+                style: { color: "red", weight: 3, fill: false }
+              }).addTo(map);
 
-            selectedOutline = L.geoJSON(layer.toGeoJSON(), {
-              style: { color: "red", weight: 3, fill: false }
-            }).addTo(map);
+              if (selectedOutline.bringToFront) selectedOutline.bringToFront();
 
-            if (selectedOutline.bringToFront) selectedOutline.bringToFront();
-
-            layer.openPopup();
-            seccionSeleccionada = null;
-            coloniaSeleccionada = layer;
-            // Renderizar respetando los filtros activos (no forzar 'Todos')
-            try {
-              const tipo = document.getElementById('filtroTipo')?.value || 'Todos';
-              const estado = document.getElementById('filtroEstado')?.value || 'Todos';
-              const mes = document.getElementById('filtroMes')?.value || 'Todos';
-              renderizar(tipo, estado, mes);
-            } catch (e) {
-              renderizar('Todos','Todos','Todos');
-            }
+              layer.openPopup();
+              seccionSeleccionada = null;
+              coloniaSeleccionada = layer;
+              // Renderizar respetando los filtros activos (no forzar 'Todos')
+              try {
+                const tipo = document.getElementById('filtroTipo')?.value || 'Todos';
+                const estado = document.getElementById('filtroEstado')?.value || 'Todos';
+                const mes = document.getElementById('filtroMes')?.value || 'Todos';
+                renderizar(tipo, estado, mes);
+              } catch (e) {
+                renderizar('Todos','Todos','Todos');
+              }
+            });
           });
 
           layer.on('popupclose', function() {
@@ -5286,9 +5311,9 @@
                 const tipo = document.getElementById('filtroTipo')?.value || 'Todos';
                 const estado = document.getElementById('filtroEstado')?.value || 'Todos';
                 const mes = document.getElementById('filtroMes')?.value || 'Todos';
-                renderizar(tipo, estado, mes);
+                triggerRenderWithLoading(tipo, estado, mes);
               } catch (e) {
-                renderizar('Todos','Todos','Todos');
+                triggerRenderWithLoading('Todos','Todos','Todos');
               }
             }
           });
@@ -5376,35 +5401,35 @@
               layer.on('click', function(e) {
                 try {
                   if (L && L.DomEvent) L.DomEvent.stopPropagation(e);
-                  try { showLoading(); } catch(e) {}
+                  runAfterLoadingPaint(() => {
+                    if (selectedOutline) {
+                      map.removeLayer(selectedOutline);
+                      selectedOutline = null;
+                    }
 
-                  if (selectedOutline) {
-                    map.removeLayer(selectedOutline);
-                    selectedOutline = null;
-                  }
+                    selectedOutline = L.geoJSON(layer.toGeoJSON(), {
+                      style: { color: "red", weight: 3, fill: false }
+                    }).addTo(map);
 
-                  selectedOutline = L.geoJSON(layer.toGeoJSON(), {
-                    style: { color: "red", weight: 3, fill: false }
-                  }).addTo(map);
+                    if (selectedOutline.bringToFront) selectedOutline.bringToFront();
 
-                  if (selectedOutline.bringToFront) selectedOutline.bringToFront();
-
-                  layer.openPopup();
-                  coloniaSeleccionada = null;
-                  seccionSeleccionada = layer;
-                  
-                  const secNum = layer.feature?.properties?.seccion || layer.feature?.properties?.SECCION;
-                  console.log('SECCIÓN CLICKEADA:', secNum);
-                  console.log('   seccionSeleccionada asignada:', seccionSeleccionada ? 'SÍ' : 'NO');
-                  
-                  try {
-                    const tipo = document.getElementById('filtroTipo')?.value || 'Todos';
-                    const estado = document.getElementById('filtroEstado')?.value || 'Todos';
-                    const mes = document.getElementById('filtroMes')?.value || 'Todos';
-                    renderizar(tipo, estado, mes);
-                  } catch (e) {
-                    renderizar('Todos','Todos','Todos');
-                  }
+                    layer.openPopup();
+                    coloniaSeleccionada = null;
+                    seccionSeleccionada = layer;
+                    
+                    const secNum = layer.feature?.properties?.seccion || layer.feature?.properties?.SECCION;
+                    console.log('SECCIÓN CLICKEADA:', secNum);
+                    console.log('   seccionSeleccionada asignada:', seccionSeleccionada ? 'SÍ' : 'NO');
+                    
+                    try {
+                      const tipo = document.getElementById('filtroTipo')?.value || 'Todos';
+                      const estado = document.getElementById('filtroEstado')?.value || 'Todos';
+                      const mes = document.getElementById('filtroMes')?.value || 'Todos';
+                      renderizar(tipo, estado, mes);
+                    } catch (e) {
+                      renderizar('Todos','Todos','Todos');
+                    }
+                  });
                 } catch(ce) {
                   console.warn("Error en click de sección:", ce);
                 }
@@ -5422,9 +5447,9 @@
                     const tipo = document.getElementById('filtroTipo')?.value || 'Todos';
                     const estado = document.getElementById('filtroEstado')?.value || 'Todos';
                     const mes = document.getElementById('filtroMes')?.value || 'Todos';
-                    renderizar(tipo, estado, mes);
+                    triggerRenderWithLoading(tipo, estado, mes);
                   } catch (e) {
-                    renderizar('Todos','Todos','Todos');
+                    triggerRenderWithLoading('Todos','Todos','Todos');
                   }
                 }
               });
@@ -5844,7 +5869,6 @@
   }
 
   function seleccionarColoniaEnMapa(valorColonia) {
-    try { showLoading(); } catch(e) {}
     if (!valorColonia || !coloniasLayer || !map) return false;
 
     const valorNorm = normalizeKey(valorColonia);
@@ -5913,126 +5937,120 @@
   // Agregar listeners solo una vez
   if (btnAplicarFiltros && !btnAplicarFiltros.hasListener) {
     btnAplicarFiltros.addEventListener("click", () => {
-      // Feedback inmediato al usuario antes del debounce/render.
-      try { showLoading(); } catch(e) {}
       const tipo = selectFiltroTipo.value;
       const estado = selectFiltroEstado.value;
       const mes = selectFiltroMes.value;
-      if (typeof renderizarDebounced === 'function') {
-        renderizarDebounced(tipo, estado, mes);
-      } else {
-        renderizar(tipo, estado, mes);
-      }
+      triggerRenderWithLoading(tipo, estado, mes, true);
     });
     btnAplicarFiltros.hasListener = true;
   }
 
   if (btnBuscarGeneral && !btnBuscarGeneral.hasListener) {
     btnBuscarGeneral.addEventListener("click", () => {
-      // Mostrar mensaje de carga desde el clic de búsqueda.
-      try { showLoading(); } catch(e) {}
-      let valor = document.getElementById("buscadorGeneral").value.trim();
-      if (!valor) {
-        try { hideLoading(); } catch(e) {}
-        return;
-      }
-
-      let solicitud = solicitudes.find(s => s["Número folio"] == valor);
-      if (solicitud) {
-        let lat = parseFloat(solicitud["Coordenada Y"]);
-        let lon = parseFloat(solicitud["Coordenada X"]);
-        if (!isNaN(lat) && !isNaN(lon)) {
-          // Hacer zoom a nivel 17 (suficiente para ver puntos)
-          map.setView([lat, lon], 17);
-          
-          // Crear y mostrar popup con la información del folio
-          const popupContent = `
-            <div style="max-width: 250px;">
-              <b>Folio:</b> ${solicitud["Número folio"]}<br>
-              <b>Ciudadano:</b> ${solicitud["Nombre Ciudadano"] || 'N/A'}<br>
-              <b>Teléfono:</b> ${solicitud["Teléfono"] || 'N/A'}<br>
-              <b>Tipo:</b> ${solicitud["Tipo de reporte"]}<br>
-              <b>Estado:</b> ${solicitud["Estado Reporte"]}<br>
-              <b>Punto de referencia:</b> ${solicitud["Punto de referencia"] || 'N/A'}<br>
-              <b>Fecha:</b> ${solicitud["Fecha reporte"] || 'N/A'}
-            </div>
-          `;
-          L.popup()
-            .setLatLng([lat, lon])
-            .setContent(popupContent)
-            .openOn(map);
+      runAfterLoadingPaint(() => {
+        let valor = document.getElementById("buscadorGeneral").value.trim();
+        if (!valor) {
+          try { hideLoading(); } catch(e) {}
+          return;
         }
 
-        let tipo = solicitud["Tipo de reporte"];
-        let estado = solicitud["Estado Reporte"];
-        document.getElementById("filtroTipo").value = tipo || "Todos";
-        document.getElementById("filtroEstado").value = estado || "Todos";
-        renderizar(tipo || "Todos", estado || "Todos", "Todos");
-        return;
-      }
-      // Si no es folio, intentar seleccionar colonia por nombre
-      if (seleccionarColoniaEnMapa(valor)) {
-        return;
-      }
-      
-      // Si no es folio ni colonia, intentar buscar por sección
-      let foundSeccionLayer = null;
-      try {
-        if (seccionesLayer) {
-          const valorKey = normalizeSeccionKey(valor);
-          seccionesLayer.eachLayer(layer => {
-            const seccion = layer.feature && layer.feature.properties && (layer.feature.properties.seccion || layer.feature.properties.SECCION);
-            // Comparar como string (el usuario puede escribir "3260")
-            if (seccion && valorKey && normalizeSeccionKey(seccion) === valorKey) {
-              foundSeccionLayer = layer;
-            }
-          });
+        let solicitud = solicitudes.find(s => s["Número folio"] == valor);
+        if (solicitud) {
+          let lat = parseFloat(solicitud["Coordenada Y"]);
+          let lon = parseFloat(solicitud["Coordenada X"]);
+          if (!isNaN(lat) && !isNaN(lon)) {
+            // Hacer zoom a nivel 17 (suficiente para ver puntos)
+            map.setView([lat, lon], 17);
+            
+            // Crear y mostrar popup con la información del folio
+            const popupContent = `
+              <div style="max-width: 250px;">
+                <b>Folio:</b> ${solicitud["Número folio"]}<br>
+                <b>Ciudadano:</b> ${solicitud["Nombre Ciudadano"] || 'N/A'}<br>
+                <b>Teléfono:</b> ${solicitud["Teléfono"] || 'N/A'}<br>
+                <b>Tipo:</b> ${solicitud["Tipo de reporte"]}<br>
+                <b>Estado:</b> ${solicitud["Estado Reporte"]}<br>
+                <b>Punto de referencia:</b> ${solicitud["Punto de referencia"] || 'N/A'}<br>
+                <b>Fecha:</b> ${solicitud["Fecha reporte"] || 'N/A'}
+              </div>
+            `;
+            L.popup()
+              .setLatLng([lat, lon])
+              .setContent(popupContent)
+              .openOn(map);
+          }
+
+          let tipo = solicitud["Tipo de reporte"];
+          let estado = solicitud["Estado Reporte"];
+          document.getElementById("filtroTipo").value = tipo || "Todos";
+          document.getElementById("filtroEstado").value = estado || "Todos";
+          renderizar(tipo || "Todos", estado || "Todos", "Todos");
+          return;
         }
-      } catch (e) {
-        console.log('Error buscando sección:', e);
-      }
-      
-      if (foundSeccionLayer) {
-        // Hacer zoom a la sección
+        // Si no es folio, intentar seleccionar colonia por nombre
+        if (seleccionarColoniaEnMapa(valor)) {
+          return;
+        }
+        
+        // Si no es folio ni colonia, intentar buscar por sección
+        let foundSeccionLayer = null;
         try {
-          const bounds = foundSeccionLayer.getBounds();
-          map.fitBounds(bounds);
-          setTimeout(() => {
-            if (map.getZoom() < 16) map.setZoom(16);
-          }, 100);
+          if (seccionesLayer) {
+            const valorKey = normalizeSeccionKey(valor);
+            seccionesLayer.eachLayer(layer => {
+              const seccion = layer.feature && layer.feature.properties && (layer.feature.properties.seccion || layer.feature.properties.SECCION);
+              // Comparar como string (el usuario puede escribir "3260")
+              if (seccion && valorKey && normalizeSeccionKey(seccion) === valorKey) {
+                foundSeccionLayer = layer;
+              }
+            });
+          }
         } catch (e) {
-          console.log("Error en fitBounds:", e);
+          console.log('Error buscando sección:', e);
         }
         
-        // Seleccionar sección y limpiar selección de colonia
-        coloniaSeleccionada = null;
-        seccionSeleccionada = foundSeccionLayer;
-        
-        const secNum = foundSeccionLayer.feature?.properties?.seccion || foundSeccionLayer.feature?.properties?.SECCION;
-        console.log('🎯 SECCIÓN SELECCIONADA:', secNum);
-        console.log('   seccionSeleccionada asignada:', seccionSeleccionada ? 'SÍ' : 'NO');
-        
-        if (selectedOutline) {
-          map.removeLayer(selectedOutline);
-          selectedOutline = null;
+        if (foundSeccionLayer) {
+          // Hacer zoom a la sección
+          try {
+            const bounds = foundSeccionLayer.getBounds();
+            map.fitBounds(bounds);
+            setTimeout(() => {
+              if (map.getZoom() < 16) map.setZoom(16);
+            }, 100);
+          } catch (e) {
+            console.log("Error en fitBounds:", e);
+          }
+          
+          // Seleccionar sección y limpiar selección de colonia
+          coloniaSeleccionada = null;
+          seccionSeleccionada = foundSeccionLayer;
+          
+          const secNum = foundSeccionLayer.feature?.properties?.seccion || foundSeccionLayer.feature?.properties?.SECCION;
+          console.log('🎯 SECCIÓN SELECCIONADA:', secNum);
+          console.log('   seccionSeleccionada asignada:', seccionSeleccionada ? 'SÍ' : 'NO');
+          
+          if (selectedOutline) {
+            map.removeLayer(selectedOutline);
+            selectedOutline = null;
+          }
+          
+          selectedOutline = L.geoJSON(foundSeccionLayer.toGeoJSON(), {
+            style: { color: "red", weight: 3, fill: false }
+          }).addTo(map);
+          
+          if (selectedOutline.bringToFront) selectedOutline.bringToFront();
+          
+          // Renderizar con filtros actuales
+          const tipo = document.getElementById('filtroTipo')?.value || 'Todos';
+          const estado = document.getElementById('filtroEstado')?.value || 'Todos';
+          const mes = document.getElementById('filtroMes')?.value || 'Todos';
+          renderizar(tipo, estado, mes);
+          return;
         }
-        
-        selectedOutline = L.geoJSON(foundSeccionLayer.toGeoJSON(), {
-          style: { color: "red", weight: 3, fill: false }
-        }).addTo(map);
-        
-        if (selectedOutline.bringToFront) selectedOutline.bringToFront();
-        
-        // Renderizar con filtros actuales
-        const tipo = document.getElementById('filtroTipo')?.value || 'Todos';
-        const estado = document.getElementById('filtroEstado')?.value || 'Todos';
-        const mes = document.getElementById('filtroMes')?.value || 'Todos';
-        renderizar(tipo, estado, mes);
-        return;
-      }
 
-      alert("No se encontró folio, colonia ni sección con: " + valor);
-      try { hideLoading(); } catch(e) {}
+        alert("No se encontró folio, colonia ni sección con: " + valor);
+        try { hideLoading(); } catch(e) {}
+      });
     });
     btnBuscarGeneral.hasListener = true;
   }
@@ -6117,23 +6135,23 @@
 
   if (btnResetBuscar && !btnResetBuscar.hasListener) {
     btnResetBuscar.addEventListener("click", () => {
-      // Mostrar loading overlay y deshabilitar botón de inmediato (síncrono)
-      const loadingDiv = document.getElementById('loadingOverlay');
-      if (loadingDiv) loadingDiv.style.display = 'flex';
       btnResetBuscar.disabled = true;
       btnResetBuscar.style.opacity = '0.5';
-      
-      document.getElementById("buscadorGeneral").value = "";
-      document.getElementById("filtroTipo").value = "Todos";
-      document.getElementById("filtroEstado").value = "Todos";
-      document.getElementById("filtroMes").value = "Todos";
-      coloniaSeleccionada = null;
-      if (selectedOutline) {
-        map.removeLayer(selectedOutline);
-        selectedOutline = null;
-      }
-      renderizar("Todos", "Todos", "Todos");
-      map.setView([19.35, -99.2], 13);
+
+      runAfterLoadingPaint(() => {
+        document.getElementById("buscadorGeneral").value = "";
+        document.getElementById("filtroTipo").value = "Todos";
+        document.getElementById("filtroEstado").value = "Todos";
+        document.getElementById("filtroMes").value = "Todos";
+        coloniaSeleccionada = null;
+        if (selectedOutline) {
+          map.removeLayer(selectedOutline);
+          selectedOutline = null;
+        }
+        renderizar("Todos", "Todos", "Todos");
+        map.setView([19.35, -99.2], 13);
+      });
+
       // Re-habilitar botón después de que termine la carga
       setTimeout(() => {
         btnResetBuscar.disabled = false;
