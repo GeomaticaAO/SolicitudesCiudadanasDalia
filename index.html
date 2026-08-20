@@ -1077,6 +1077,7 @@
   var estadisticasPorSeccion = {};
   var puntosLayer = null;
   var legendControl = null;
+  var layersControl = null;
   var puntosToggleControl = null;
   var coloniasToggleControl = null;
   var seccionesToggleControl = null;
@@ -1844,7 +1845,7 @@
 
   // ========== CONTROLES DE CAPAS CON SIMBOLOGÍA DESPLEGABLE ==========
   function agregarControlesCapas() {
-    if (!map || !coloniasLayer || !seccionesLayer) return;
+    if (!map || !coloniasLayer || !seccionesLayer || layersControl) return;
 
     var LayersControl = L.Control.extend({
       options: {
@@ -1920,7 +1921,7 @@
       }
     });
 
-    var layersControl = new LayersControl();
+    layersControl = new LayersControl();
     map.addControl(layersControl);
     
     // Event listeners
@@ -5340,6 +5341,7 @@
 
       coloniasLoaded = true;
       console.log("✅ Colonias cargadas");
+      agregarControlesCapas();
       // Inicializar el autocompletado una vez que tengamos colonias
       try { initializeAutocompleteFallback(); } catch(e) { console.log('Autocomplete init error', e); }
       iniciarSiTodoEstaListo();
@@ -6871,23 +6873,6 @@
 
   // ========== CONTROLES MAPA: LEYENDA Y TOGGLE PUNTOS ==========
   function createMapControls() {
-    // Leyenda antigua - OCULTA (ahora se usa el panel de capas con simbología)
-    if (!legendControl) {
-      legendControl = L.control({ position: 'topright' });
-      legendControl.onAdd = function(map) {
-        var div = L.DomUtil.create('div', 'info legend');
-        div.id = 'mapLegend';
-        div.style.background = 'white';
-        div.style.padding = '6px';
-        div.style.boxShadow = '0 0 6px rgba(0,0,0,0.3)';
-        div.style.display = 'none'; // OCULTAR - Ahora usamos panel de capas
-        div.innerHTML = '<b>Solicitudes</b><br>Cargando...';
-        L.DomEvent.disableClickPropagation(div);
-        return div;
-      };
-      legendControl.addTo(map);
-    }
-
     // El toggle de puntos ahora vive en el panel "Control de Capas"
     if (!puntosToggleControl) {
       puntosToggleControl = { embeddedInLayersPanel: true };
